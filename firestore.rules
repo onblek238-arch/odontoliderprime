@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // Bootstrapped admin + database check
+      return isSignedIn() && (
+        request.auth.token.email == 'onblek238@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Appointment Validation ---
+    function isValidAppointment(data) {
+      return data.patientName is string && data.patientName.size() <= 100 &&
+             data.patientWhatsApp is string && data.patientWhatsApp.size() <= 30 &&
+             data.treatment is string && data.treatment.size() <= 100 &&
+             data.unit in ['Unidade I', 'Unidade II'] &&
+             data.date is string && data.date.size() <= 20 &&
+             data.time is string && data.time.size() <= 10 &&
+             data.status in ['pending', 'confirmed', 'completed', 'cancelled'] &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    // --- Rules ---
+
+    match /appointments/{appointmentId} {
+      allow list, get: if isAdmin();
+      
+      allow create: if isValidId(appointmentId) && 
+                      isValidAppointment(incoming()) &&
+                      incoming().status == 'pending' &&
+                      incoming().createdAt == request.time &&
+                      incoming().updatedAt == request.time;
+
+      allow update: if isAdmin() &&
+                      isValidAppointment(incoming()) &&
+                      incoming().updatedAt == request.time &&
+                      incoming().createdAt == existing().createdAt;
+
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

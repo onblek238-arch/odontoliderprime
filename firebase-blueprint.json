@@ -1,0 +1,29 @@
+{
+  "entities": {
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Represents a dental appointment booking.",
+      "type": "object",
+      "properties": {
+        "patientName": { "type": "string", "description": "Full name of the patient" },
+        "patientEmail": { "type": "string", "format": "email", "description": "Email address" },
+        "patientWhatsApp": { "type": "string", "description": "WhatsApp contact number" },
+        "treatment": { "type": "string", "description": "Selected treatment type" },
+        "unit": { "type": "string", "enum": ["Unidade I", "Unidade II"], "description": "Selected clinic unit" },
+        "date": { "type": "string", "format": "date", "description": "Appointment date" },
+        "time": { "type": "string", "description": "Preferred time slot" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled"], "description": "Current status" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientName", "patientWhatsApp", "treatment", "unit", "date", "time", "status"]
+    }
+  },
+  "firestore": {
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Collection of all appointment requests."
+    }
+  }
+}
